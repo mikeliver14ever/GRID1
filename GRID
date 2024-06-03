@@ -19,7 +19,7 @@ from trainModel import train_model
 from testModel import test_model
 
 # Configuration
-WEBHOOK_URL = "https://discord.com/api/webhooks/1211934785283424266/BCtBJSwzwDMkCrCPuLiJeYYqH7u93tGMfoB2SS5z6SRRaDUvJYNFqQSEl52xyT9th5n3"
+WEBHOOK_URL = "https://discord.com/api/webhooks/1211934785283424266/BCtBJSwzwDMkCruLiJeYYqH7u93tGMfoB2SS5z6SRRaDUvJYNFqQSEl52xyT9th5n3"
 BOT_TOKEN = "MTA1OTM4Mjc0NjMzNTY3NDQwOA.G5F7se.GNYkocgIpEbh792pTbFG9LUIA5bID10o0xGzS8"
 
 # Discord bot setup
